@@ -1,8 +1,13 @@
 package main
 
-import "fmt"
+import (
+	// "bufio"
+	"fmt"
+	"github.com/eiannone/keyboard"
+	// "os"
+)
 
-func printIntro(){
+func printIntro() {
 	fmt.Print(`
 Welcome to CLI Type. To change the mode of typing, type :q
 
@@ -12,22 +17,36 @@ Welcome to CLI Type. To change the mode of typing, type :q
 Select a mode: `)
 }
 
-func timetype(){
-	var typed string
-	fmt.Println("testing words for you to type this is how is done if fan cup food lunch hungry rice snowboard goggles\r")	
-	fmt.Scan(&typed)
-	fmt.Println("type test complete")
+func timetype() {
+	if err := keyboard.Open(); err != nil {
+		panic(err)
+	}
+	defer func() {
+		_ = keyboard.Close()
+	}()
+
+	fmt.Println("Press ESC to quit")
+	for {
+		char, key, err := keyboard.GetKey()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("You pressed: rune %q, key %X\r\n", char, key)
+		if key == keyboard.KeyEsc {
+			break
+		}
+	}
 }
 
-func wordstype(){
+func wordstype() {
 
 }
 
-func main(){
+func main() {
 	for {
 		var i string
 		printIntro()
-		fmt.Scan(&i)
+		fmt.Scanln(&i)
 		if i == "1" {
 			fmt.Println("Chose Time")
 			timetype()
