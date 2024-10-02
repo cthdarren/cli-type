@@ -4,6 +4,30 @@ import os
 import configparser
 from enum import Enum
 
+WELCOME_TEXT = """
+Welcome to CLI Type. An open source typing test at your fingertips in your cli!.
+
+Press ESC at any time to open the menu.
+"""
+
+MENU_TEXT = """
+-------------- Menu -------------- 
+
+[  1  ] Change Mode
+
+[  2  ] Change Time/Words
+
+[  3  ] Change Wordlist
+
+[  4  ] View Stats
+
+[  q  ] Quit CLI-type
+
+[ ESC ] Back
+
+----------------------------------
+"""
+
 class Mode(Enum):
     WORD = 1
     TIME = 2
@@ -23,22 +47,49 @@ class ConfigurationHandler:
             self.configpath = ".clityperc"
 
     
-    def getconfig(self, section, key):
+    def getconfig(self, section, key, default_value):
         self.config.read(self.configpath)
-        print(self.config[section][key])
+        try:
+            return self.config[section][key]
+        except KeyError:
+            print(f"ERROR: Failed to read configuration file at [{section}]{key}, using default values...")
+            return default_value
 
     def setconfig(self, section, key, value):
         self.config.read(self.configpath)
         self.config[section][key] = value
         with open(self.configpath, "w") as cfgfile:
-            self.config.write(cfgfile)
+            try: 
+                self.config.write(cfgfile)
+                return True
+            except:
+                return False
+
 
 class TypingTest:
     def __init__(self):
-        self.config = ConfigurationHandler()
-        self.mode = Mode.WORD
+        config = ConfigurationHandler()
+        self.mode = int(config.getconfig("Test", "Mode", 1))
+        self.time = int(config.getconfig("Test", "Time", 30))
+        self.words = int(config.getconfig("Test", "Words", 50))
+        self.wordset = int(config.getconfig("Test", "Words", 50))
+
+    def start(self):
+        print(WELCOME_TEXT)
+        match self.mode:
+            case Mode.WORD.value:
+                self.word_test()
+            case Mode.TIME:
+                self.time_test()
+            case _:
+                print(self.mode)
+
+    def word_test(self):
+        return
+
+    def time_test(self):
+        return
 
 
-ConfigurationHandler().getconfig("Test", "Mode")
-ConfigurationHandler().setconfig("Test", "sode", "asdf")
-ConfigurationHandler().setconfig("Test", "ss$de", "asdl")
+TypingTest().start()
+
