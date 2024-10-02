@@ -3,8 +3,11 @@ package main
 import (
 	// "bufio"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/eiannone/keyboard"
-	// "os"
 )
 
 func printIntro() {
@@ -33,6 +36,7 @@ func timetype() {
 		}
 		fmt.Printf("You pressed: rune %q, key %X\r\n", char, key)
 		if key == keyboard.KeyEsc {
+			fmt.Printf("Escaped")
 			break
 		}
 	}
@@ -42,7 +46,22 @@ func wordstype() {
 
 }
 
+
+func gracefulShutdown() {
+    s := make(chan os.Signal, 1)
+    signal.Notify(s, os.Interrupt)
+    signal.Notify(s, syscall.SIGTERM)
+
+    go func() {
+        <-s
+        fmt.Println("Shutting down gracefully due to signal.")
+        os.Exit(0)
+    }()
+}
+
+
 func main() {
+	gracefulShutdown()
 	for {
 		var i string
 		printIntro()
@@ -53,7 +72,8 @@ func main() {
 		} else if i == "2" {
 			fmt.Println("Chose Words")
 		} else if i == ":q" {
-			fmt.Println("exiting...")
+			fmt.Println("Thank you for using CLI Type!")
+			os.Exit(0)	
 		} else {
 			fmt.Println("Unknown command.")
 		}
