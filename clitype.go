@@ -49,6 +49,7 @@ func timetype() {
 		}
 		count += 1
 		fmt.Printf("\r" + hist + text[count:maxLen])
+		fmt.Printf("\033[%dD", maxLen - count)
 
 		if key == keyboard.KeyEsc {
 			fmt.Printf("Escaped")
