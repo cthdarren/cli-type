@@ -30,24 +30,29 @@ func timetype() {
 
 	fmt.Println("Press ESC to quit")
 	var text string = "The quick brown fox jumps over the lazy dog"
-	fmt.Printf(text)
 	var maxLen int = len(text)
 	var count int = 0
 	var hist string = ""
+
+	fmt.Printf(text)
+	fmt.Printf("\033[%dD", maxLen)
+
 	for {
 		char, key, err := keyboard.GetKey()
+		count += 1
 		if count == maxLen{
 			break
 		}
 		if err != nil {
 			panic(err)
 		}
+
 		if key == keyboard.KeySpace{
 			hist += " " 
 		} else{
 			hist += string(char)
 		}
-		count += 1
+
 		fmt.Printf("\r" + hist + text[count:maxLen])
 		fmt.Printf("\033[%dD", maxLen - count)
 
