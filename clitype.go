@@ -2,9 +2,12 @@ package main
 
 import (
 	// "bufio"
+	"encoding/csv"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -91,7 +94,7 @@ func timetype(text string) {
 	}
 	time_taken := time.Since(start).Seconds()
 	mins_taken := time.Since(start).Minutes()
-	num_words := 9 // text.count spaces
+	num_words := len(strings.Split(text, " "))
 	num_chars := len(text)
 
 	fmt.Printf("\n\n Time taken: %.2f seconds", time_taken)
@@ -126,8 +129,36 @@ func main() {
 		printIntro()
 		fmt.Scanln(&i)
 		if i == "1" {
-			fmt.Println("Chose Time")
-			timetype("the quick brown fox jumps over the lazy dog")
+			numwordlist := 200
+			wordlist := "wordlists/200.csv"
+			var words []string
+			time := 3 
+			numwords := time * 10
+
+			file, err := os.Open(wordlist) 
+      
+			if err != nil { 
+				fmt.Println("Error while reading the file", err) 
+				return
+			} 
+		  
+			defer file.Close() 
+		  
+			reader := csv.NewReader(file) 
+
+			  
+			records, err := reader.ReadAll()
+
+			for _, eachrecord := range records { 
+				words = append(words, eachrecord...)
+			}
+
+			selectedWords := make([]string, numwords)
+			for i := 0; i < numwords; i++ {
+				index := rand.Intn(numwordlist)
+				selectedWords[i] = words[index]
+			}
+			timetype(strings.Join(selectedWords, " "))
 		} else if i == "2" {
 			fmt.Println("Chose Words")
 		} else if i == ":q" {
