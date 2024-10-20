@@ -10,7 +10,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
+	"golang.org/x/term"
 	"github.com/eiannone/keyboard"
 )
 
@@ -29,14 +29,24 @@ Select a mode: `)
 }
 
 func timetype(text string) {
-	if err := keyboard.Open(); err != nil {
-		panic(err)
+	width, height, termerr := term.GetSize(0)
+
+	if height > 0{
+
+	}
+
+	if termerr != nil {
+        return
+    }
+
+	if keeberr := keyboard.Open(); keeberr != nil {
+		panic(keeberr)
 	}
 	defer func() {
 		_ = keyboard.Close()
 	}()
 
-	fmt.Println("Press ESC to quit")
+	fmt.Println("\nPress ESC to quit\n")
 
 	var maxLen int = len(text)
 	var cursor_pos int = 0
@@ -45,11 +55,12 @@ func timetype(text string) {
 	var start = time.Now()
 
 	fmt.Printf(text)
-	fmt.Printf("\033[%dD", maxLen)
+	cursorToBeginning()
+	cursorUp(maxLen/width) //2
 
 	for {
 		char, key, err := keyboard.GetKey()
-		if start_timer{
+		if start_timer {
 			start = time.Now()
 			start_timer = false
 		}
@@ -62,18 +73,21 @@ func timetype(text string) {
 			break
 		}
 
-		if key == keyboard.KeySpace{
-			hist += " " 
-		} else {
-			if string(char) != string(text[cursor_pos]){
-				hist += "_"
-			} else{
-				hist += string(char)
-			}
+		if key == keyboard.KeySpace {
+			char = ' '
 		}
 
+		if string(char) != string(text[cursor_pos]) {
+			hist += "_"
+		} else {
+			hist += string(char)
+		}
+
+		cursorToBeginning()
+		cursorUp((cursor_pos)/width)
+
 		if key == keyboard.KeyBackspace || key == keyboard.KeyBackspace2 {
-			if cursor_pos > 0{
+			if cursor_pos > 0 {
 				cursor_pos -= 1
 			}
 			if len(hist) > 1 {
@@ -83,13 +97,22 @@ func timetype(text string) {
 			cursor_pos += 1
 		}
 
-		if cursor_pos == maxLen{
+		if cursor_pos == maxLen {
 			break
 		}
 
-
-		fmt.Printf("\r" + hist + text[cursor_pos:maxLen])
-		fmt.Printf("\033[%dD", maxLen - cursor_pos)
+		fmt.Printf(hist + text[cursor_pos:maxLen])
+		cursorToBeginning()
+		cursorUp(maxLen/width - ((cursor_pos)/width))
+		cursorRight(len(hist)%width)
+		
+		// if (maxLen-cursor_pos > width){
+		// 	
+		// 	# for number of times maxLen-cursor_pos can be divided by width{
+		// 		fmt.Printf("\033[A")
+		// 	}
+		// }
+		// fmt.Printf("\033[%dD", maxLen-cursor_pos)
 
 	}
 	time_taken := time.Since(start).Seconds()
@@ -97,30 +120,49 @@ func timetype(text string) {
 	num_words := len(strings.Split(text, " "))
 	num_chars := len(text)
 
-	fmt.Printf("\n\n Time taken: %.2f seconds", time_taken)
-	fmt.Printf("\n Words typed: %d words",num_words)
-	fmt.Printf("\n Characters typed: %d characters",num_chars)
-	fmt.Printf("\n CPM : %f CPM",float64(num_chars)/mins_taken)
-	fmt.Printf("\n WPM: %f WPM",float64(num_words)/mins_taken)
+	fmt.Printf("\n\nTime taken: %.2f seconds", time_taken)
+	fmt.Printf("\nWords typed: %d words", num_words)
+	fmt.Printf("\nCharacters typed: %d characters", num_chars)
+	fmt.Printf("\nCPM : %f CPM", float64(num_chars)/mins_taken)
+	fmt.Printf("\nWPM: %f WPM", float64(num_words)/mins_taken)
 }
 
 func wordstype(text string) {
 
 }
 
-
 func gracefulShutdown() {
-    s := make(chan os.Signal, 1)
-    signal.Notify(s, os.Interrupt)
-    signal.Notify(s, syscall.SIGTERM)
+	s := make(chan os.Signal, 1)
+	signal.Notify(s, os.Interrupt)
+	signal.Notify(s, syscall.SIGTERM)
 
-    go func() {
-        <-s
-        fmt.Println("Shutting down gracefully due to signal.")
-        os.Exit(0)
-    }()
+	go func() {
+		<-s
+		fmt.Println("Shutting down gracefully due to signal.")
+		os.Exit(0)
+	}()
 }
 
+func numLinesToStartFromCursor(chars_per_line int, text_len int, cursor_pos int) int {
+	var cursor_line int = cursor_pos/chars_per_line
+	return cursor_line
+}
+
+func cursorUp(num int) {
+	if num > 0{
+		fmt.Printf("\033[%dA", num)
+	}
+}
+
+func cursorToBeginning() {
+	fmt.Printf("\r")
+}
+
+func cursorRight(num int){
+	if num > 0{
+		fmt.Printf("\033[%dC", num)
+	}
+}
 
 func main() {
 	gracefulShutdown()
@@ -132,24 +174,25 @@ func main() {
 			numwordlist := 200
 			wordlist := "wordlists/200.csv"
 			var words []string
-			time := 3 
+			var time int
+			fmt.Println("Please enter the amount of time you wish to type for in seconds: ")
+			fmt.Scanln(&time)
 			numwords := time * 10
 
-			file, err := os.Open(wordlist) 
-      
-			if err != nil { 
-				fmt.Println("Error while reading the file", err) 
-				return
-			} 
-		  
-			defer file.Close() 
-		  
-			reader := csv.NewReader(file) 
+			file, err := os.Open(wordlist)
 
-			  
+			if err != nil {
+				fmt.Println("Error while reading the file", err)
+				return
+			}
+
+			defer file.Close()
+
+			reader := csv.NewReader(file)
+
 			records, err := reader.ReadAll()
 
-			for _, eachrecord := range records { 
+			for _, eachrecord := range records {
 				words = append(words, eachrecord...)
 			}
 
@@ -163,7 +206,7 @@ func main() {
 			fmt.Println("Chose Words")
 		} else if i == ":q" {
 			fmt.Println("Thank you for using CLI Type!")
-			os.Exit(0)	
+			os.Exit(0)
 		} else {
 			fmt.Println("Unknown command.")
 		}
