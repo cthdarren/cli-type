@@ -98,10 +98,23 @@ func timetype(text string) {
 		}
 
 		if cursor_pos == maxLen {
+			cursorDown((cursor_pos)/width)
 			break
 		}
 
-		fmt.Printf(hist + text[cursor_pos:maxLen])
+		output := hist + text[cursor_pos:maxLen]
+
+		// TODO: for time type mode, make it "infinite" scrolling
+		// if (len(output) > (3 * width)){
+		// 	// if the cursor is on the third line or lower
+		// 	if (len(hist) > (2 * width)){
+		// 		lines_typed := len(hist)%width + 1
+		// 		fmt.Printf(output[lines_typed:])
+		// 	} else{
+		// 		fmt.Printf(output[:(3*width)])
+		// 	}
+		// }
+		fmt.Printf(output)
 		cursorToBeginning()
 		cursorUp(maxLen/width - ((cursor_pos)/width))
 		cursorRight(len(hist)%width)
@@ -146,6 +159,12 @@ func gracefulShutdown() {
 func numLinesToStartFromCursor(chars_per_line int, text_len int, cursor_pos int) int {
 	var cursor_line int = cursor_pos/chars_per_line
 	return cursor_line
+}
+
+func cursorDown(num int) {
+	if num > 0{
+		fmt.Printf("\033[%dB", num)
+	}
 }
 
 func cursorUp(num int) {
