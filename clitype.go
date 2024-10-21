@@ -33,6 +33,7 @@ func timer(duration int, done chan<- bool) {
 	done <- true
 }
 
+// func waitForKey()
 func typetest(text string, time_sec int) {
 	done := make(chan bool)
 
@@ -63,19 +64,19 @@ func typetest(text string, time_sec int) {
 	var hist string = ""
 	var start_timer bool = true
 	var start = time.Now()
-	breakFlag := false
+	// breakFlag := false
 
 	fmt.Printf(text)
 	cursorToBeginning()
 	cursorUp(maxLen / width) //2
 
 	for {
-		select {
-		case <-done:
-			fmt.Println("DONEEEE")
-			breakFlag = true
-			break
-		default:
+		// select {
+		// case <-done:
+			// fmt.Println("DONEEEE")
+			// breakFlag = true
+			// break
+		// default:
 			char, key, err := keyboard.GetKey()
 			if start_timer {
 				start = time.Now()
@@ -137,10 +138,10 @@ func typetest(text string, time_sec int) {
 			cursorUp(maxLen/width - ((cursor_pos) / width))
 			cursorRight(len(hist) % width)
 		}
-		if breakFlag {
-			break
-		}
-	}
+		// if breakFlag {
+		// 	break
+		// }
+	// }
 
 	time_taken := time.Since(start).Seconds()
 	mins_taken := time.Since(start).Minutes()
@@ -152,7 +153,7 @@ func typetest(text string, time_sec int) {
 	fmt.Printf("\nCharacters typed: %d characters", num_chars)
 	fmt.Printf("\nCPM : %f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
 	fmt.Printf("\nWPM: %f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
-	fmt.Printf("\nAccuracy: %.2f%", (float64(calcNumCorrectChars(hist, text))/float64(num_chars)) * 100)
+	fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars)))
 }
 
 func calcNumCorrectWords(typed string, original_text string) int {
