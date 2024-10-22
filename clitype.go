@@ -115,6 +115,15 @@ func typetest(text string, time_sec int) {
 				}
 
 				if key == keyboard.KeySpace {
+					if text[cursor_pos] != ' '{
+						for {
+							if text[cursor_pos] == ' '{
+								break
+							}
+							hist += "_"
+							cursor_pos += 1
+						}
+					} 
 					char = ' '
 				}
 
@@ -172,18 +181,21 @@ func typetest(text string, time_sec int) {
 
 	time_taken := time.Since(start).Seconds()
 	mins_taken := time.Since(start).Minutes()
-	num_words_typed := len(strings.Split(hist, " "))
-	num_chars_typed := len(strings.ReplaceAll(hist, " ", ""))
+	typed_no_underscores := strings.ReplaceAll(hist, "_", "")
+	num_words_typed := len(strings.Fields(typed_no_underscores))
+	num_chars_typed := len(strings.ReplaceAll(typed_no_underscores, " ", ""))
+	// this includes num chars skipped with spacebar
+	num_chars_in_hist := len(strings.ReplaceAll(hist, " ", ""))
 
 	fmt.Printf("\n\nTime taken: %.2f seconds", time_taken)
 	fmt.Printf("\nWords typed: %d words", num_words_typed)
 	fmt.Printf("\nCharacters typed: %d characters", num_chars_typed)
-	fmt.Printf("\nCPM : %f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
-	fmt.Printf("\nWPM: %f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
+	fmt.Printf("\nCPM : %.2f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
+	fmt.Printf("\nWPM: %.2f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
 	if num_chars_typed == 0{
 		fmt.Printf("\nAccuracy: -")
 	} else {
-		fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars_typed)))
+		fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars_in_hist)))
 	}
 }
 
