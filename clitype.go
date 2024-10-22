@@ -33,18 +33,32 @@ func timer(duration int, done chan<- bool) {
 	done <- true
 }
 
-// func waitForKey()
+type KeyPress struct {
+	Char rune
+	Key keyboard.Key
+	Err error
+}
+
+func waitForKey(keypressed chan <- KeyPress) {
+	for {
+		char, key, err := keyboard.GetKey()
+		keypressed <- KeyPress{Char: char, Key: key, Err: err}
+	}
+}
+
 func typetest(text string, time_sec int) {
 	done := make(chan bool)
+	keypressed := make(chan KeyPress)
 
 	if time_sec > 0 {
 		go timer(time_sec, done)
 	}
+
+	go waitForKey(keypressed) 
+
 	width, height, termerr := term.GetSize(0)
 
-	if height > 0 {
-
-	}
+	if height > 0 {}
 
 	if termerr != nil {
 		return
@@ -64,96 +78,113 @@ func typetest(text string, time_sec int) {
 	var hist string = ""
 	var start_timer bool = true
 	var start = time.Now()
-	// breakFlag := false
+	breakFlag := false
 
 	fmt.Printf(text)
 	cursorToBeginning()
 	cursorUp(maxLen / width) //2
 
 	for {
-		// select {
-		// case <-done:
-			// fmt.Println("DONEEEE")
-			// breakFlag = true
-			// break
-		// default:
-			char, key, err := keyboard.GetKey()
-			if start_timer {
-				start = time.Now()
-				start_timer = false
-			}
-
-			if err != nil {
-				panic(err)
-			}
-
-			if key == keyboard.KeyEsc {
-				break
-			}
-
-			if key == keyboard.KeySpace {
-				char = ' '
-			}
-
-			// TODO when i press space go to the next word instead of putting a space where i am now
-			if string(char) != string(text[cursor_pos]) {
-				hist += "_"
-			} else {
-				hist += string(char)
-			}
-
-			cursorToBeginning()
-			cursorUp((cursor_pos) / width)
-
-			if key == keyboard.KeyBackspace || key == keyboard.KeyBackspace2 {
-				if cursor_pos > 0 {
-					cursor_pos -= 1
-				}
-				if len(hist) > 1 {
-					hist = hist[:len(hist)-2]
-				}
-			} else {
-				cursor_pos += 1
-			}
-
-			if cursor_pos == maxLen {
-				cursorDown((cursor_pos) / width)
-				break
-			}
-
-			output := hist + text[cursor_pos:maxLen]
-
-			// TODO: for time type mode, make it "infinite" scrolling
-			// if (len(output) > (3 * width)){
-			// 	// if the cursor is on the third line or lower
-			// 	if (len(hist) > (2 * width)){
-			// 		lines_typed := len(hist)%width + 1
-			// 		fmt.Printf(output[lines_typed:])
-			// 	} else{
-			// 		fmt.Printf(output[:(3*width)])
-			// 	}
-			// }
-			fmt.Printf(output)
-			cursorToBeginning()
-			cursorUp(maxLen/width - ((cursor_pos) / width))
-			cursorRight(len(hist) % width)
+		if start_timer {
+			start = time.Now()
+			start_timer = false
 		}
-		// if breakFlag {
-		// 	break
-		// }
-	// }
+
+		select {
+			case <- done:
+				breakFlag = true
+				cursorDown((3*width - cursor_pos) / width)
+				break
+			case pressed := <- keypressed:
+				char := pressed.Char
+				key := pressed.Key
+				err := pressed.Err
+
+				if start_timer {
+					start = time.Now()
+					start_timer = false
+				}
+
+				if err != nil {
+					panic(err)
+				}
+
+				if key == keyboard.KeyEsc {
+					breakFlag = true
+					break
+				}
+
+				if key == keyboard.KeySpace {
+					char = ' '
+				}
+
+				// TODO when i press space go to the next word instead of putting a space where i am now
+				if string(char) != string(text[cursor_pos]) {
+					hist += "_"
+				} else {
+					hist += string(char)
+				}
+
+				cursorToBeginning()
+				cursorUp((cursor_pos) / width)
+
+				if key == keyboard.KeyBackspace || key == keyboard.KeyBackspace2 {
+					if cursor_pos > 0 {
+						cursor_pos -= 1
+					}
+					if len(hist) > 1 {
+						hist = hist[:len(hist)-2]
+					}
+				} else {
+					cursor_pos += 1
+				}
+
+				if cursor_pos == maxLen {
+					cursorDown((cursor_pos) / width)
+					breakFlag = true
+					break
+				}
+
+				output := hist + text[cursor_pos:maxLen]
+
+				// TODO: for time type mode, make it "infinite" scrolling
+				// if (len(output) > (3 * width)){
+				// 	// if the cursor is on the third line or lower
+				// 	if (len(hist) > (2 * width)){
+				// 		lines_typed := len(hist)%width + 1
+				// 		fmt.Printf(output[lines_typed:])
+				// 	} else{
+				// 		fmt.Printf(output[:(3*width)])
+				// 	}
+				// }
+				fmt.Printf(output)
+				cursorToBeginning()
+				cursorUp(maxLen/width - ((cursor_pos) / width))
+				cursorRight(len(hist) % width)
+				break
+			default:
+				break
+		}
+		if breakFlag{
+			break
+		}
+	}
 
 	time_taken := time.Since(start).Seconds()
 	mins_taken := time.Since(start).Minutes()
-	num_words := len(strings.Split(text, " "))
-	num_chars := len(strings.ReplaceAll(text, " ", ""))
+	num_words_typed := len(strings.Split(hist, " "))
+	num_chars_typed := len(strings.ReplaceAll(hist, " ", ""))
 
 	fmt.Printf("\n\nTime taken: %.2f seconds", time_taken)
-	fmt.Printf("\nWords typed: %d words", num_words)
-	fmt.Printf("\nCharacters typed: %d characters", num_chars)
+	fmt.Printf("\nWords typed: %d words", num_words_typed)
+	fmt.Printf("\nCharacters typed: %d characters", num_chars_typed)
 	fmt.Printf("\nCPM : %f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
 	fmt.Printf("\nWPM: %f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
-	fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars)))
+	if num_chars_typed == 0{
+		fmt.Printf("\nAccuracy: -")
+	} else {
+		fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars_typed)))
+	}
 }
 
 func calcNumCorrectWords(typed string, original_text string) int {
@@ -178,7 +209,13 @@ func calcNumCorrectWords(typed string, original_text string) int {
 
 func calcNumCorrectChars(typed string, original_text string) int {
 	result := 0
-	for i := 0; i < len(original_text); i++ {
+	var shorter_len int  
+	if len(typed) < len(original_text){
+		shorter_len = len(typed)
+	} else{
+		shorter_len = len(original_text)
+	}
+	for i := 0; i < shorter_len; i++ {
 		if typed[i] == original_text[i] {
 			if typed[i] != ' ' {
 				result++
