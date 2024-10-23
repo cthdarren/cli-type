@@ -1,7 +1,15 @@
+//    TODOs
+//
+//    ctrl + backspace
+//    Infinite scroll on time mode
+//    .rc file for keeping track of settings
+//    start test with most recent settings when the program is run
+
 package main
 
 import (
 	// "bufio"
+	"embed"
 	"encoding/csv"
 	"fmt"
 	"github.com/eiannone/keyboard"
@@ -13,6 +21,18 @@ import (
 	"syscall"
 	"time"
 )
+
+//go:embed wordlists/200.csv
+var wordlist200 embed.FS
+
+//go:embed wordlists/1000.csv
+var wordlist1000 embed.FS
+
+//go:embed wordlists/2000.csv
+var wordlist2000 embed.FS
+
+//go:embed wordlists/5000.csv
+var wordlist5000 embed.FS
 
 func printIntro() {
 	fmt.Print(`
@@ -279,7 +299,6 @@ func cursorRight(num int) {
 func main() {
 	gracefulShutdown()
 	numwordlist := 200
-	wordlist := "wordlists/200.csv"
 	var words []string
 	var numwords int
 
@@ -293,19 +312,16 @@ func main() {
 			fmt.Scanln(&time_sec)
 			numwords = 10 * time_sec
 
-			file, err := os.Open(wordlist)
-
+			data, err := wordlist200.ReadFile("wordlists/200.csv")
 			if err != nil {
 				fmt.Println("Error while reading the file", err)
 				return
 			}
 
-			defer file.Close()
-
-			reader := csv.NewReader(file)
+			reader := csv.NewReader(strings.NewReader(string(data)))
 
 			records, err := reader.ReadAll()
-
+			// records := strings.Join(string(data), ",")
 			for _, eachrecord := range records {
 				words = append(words, eachrecord...)
 			}
@@ -320,17 +336,13 @@ func main() {
 			fmt.Println("Please enter the number of words you wish to type for: ")
 			fmt.Scanln(&numwords)
 
-			file, err := os.Open(wordlist)
-
+			data, err := wordlist200.ReadFile("wordlists/200.csv")
 			if err != nil {
 				fmt.Println("Error while reading the file", err)
 				return
 			}
 
-			defer file.Close()
-
-			reader := csv.NewReader(file)
-
+			reader := csv.NewReader(strings.NewReader(string(data)))
 			records, err := reader.ReadAll()
 
 			for _, eachrecord := range records {
