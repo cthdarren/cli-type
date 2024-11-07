@@ -100,9 +100,16 @@ func typetest(text string, time_sec int) {
 	breakFlag := false
 	escaped := false
 
-	fmt.Printf(text)
-	cursorToBeginning()
-	cursorUp(maxLen / width) //2
+
+	if (len(text) > (3 * width)){
+		fmt.Printf(text[:(3*width)])
+		cursorToBeginning()
+		cursorUp(2)
+	}else{
+		fmt.Printf(text)
+		cursorToBeginning()
+		cursorUp(maxLen / width) 
+	}
 
 	for {
 		if start_timer {
@@ -193,19 +200,28 @@ func typetest(text string, time_sec int) {
 				output := hist + text[cursor_pos:maxLen]
 
 				// TODO: for time type mode, make it "infinite" scrolling
-				// if (len(output) > (3 * width)){
-				// 	// if the cursor is on the third line or lower
-				// 	if (len(hist) > (2 * width)){
-				// 		lines_typed := len(hist)%width + 1
-				// 		fmt.Printf(output[lines_typed:])
-				// 	} else{
-				// 		fmt.Printf(output[:(3*width)])
-				// 	}
-				// }
-				fmt.Printf(output)
-				cursorToBeginning()
-				cursorUp(maxLen/width - ((cursor_pos) / width))
-				cursorRight(len(hist) % width)
+				if (len(output) > (3 * width)){
+					// if the cursor is on the third line or lower
+					if (len(hist) > (width)){
+						lines_typed := len(hist)%width + 1
+						output = output[lines_typed:]
+						fmt.Printf(output)
+						cursorToBeginning()
+						cursorUp(1)
+						cursorRight(len(hist) % width)
+					} else{
+						output = output[:(3*width)]
+						fmt.Printf(output)
+						cursorToBeginning()
+						cursorUp(2)
+						cursorRight(len(hist) % width)
+					}
+				} else{
+					fmt.Printf(output)
+					cursorToBeginning()
+					cursorUp(maxLen/width - ((cursor_pos) / width))
+					cursorRight(len(hist) % width)
+				}
 				break
 			default:
 				break
