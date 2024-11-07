@@ -218,25 +218,31 @@ func typetest(text string, time_sec int) {
 	if (!escaped){
 		time_taken := time.Since(start).Seconds()
 		mins_taken := time.Since(start).Minutes()
-		typed_no_underscores := strings.ReplaceAll(hist, "_", "")
-		num_words_typed := len(strings.Fields(typed_no_underscores))
-		num_chars_typed := len(strings.ReplaceAll(typed_no_underscores, " ", ""))
-		// this includes num chars skipped with spacebar
-		num_chars_in_hist := len(strings.ReplaceAll(hist, " ", ""))
-
-		fmt.Printf("\n\nTime taken: %.2f seconds", time_taken)
-		fmt.Printf("\nWords typed: %d words", num_words_typed)
-		fmt.Printf("\nCharacters typed: %d characters", num_chars_typed)
-		fmt.Printf("\nCPM : %.2f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
-		fmt.Printf("\nWPM: %.2f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
-		if num_chars_typed == 0{
-			fmt.Printf("\nAccuracy: -")
-		} else {
-			fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars_in_hist)))
-		}
+		printResults(hist, text, time_taken, mins_taken)
 		return
 	}
 	fmt.Printf(("\n\n\n"))
+}
+
+func printResults(hist string, text string, time_taken float64, mins_taken float64){
+	// remove all underscores, don't include underscores in score calc
+	typed_no_underscores := strings.ReplaceAll(hist, "_", "")
+
+	num_words_typed := len(strings.Fields(typed_no_underscores))
+	num_chars_typed := len(strings.ReplaceAll(typed_no_underscores, " ", ""))
+
+	// this includes num chars skipped with spacebar
+	num_chars_in_hist := len(strings.ReplaceAll(hist, " ", ""))
+	fmt.Printf("\n\nTime taken: %.2f seconds", time_taken)
+	fmt.Printf("\nWords typed: %d words", num_words_typed)
+	fmt.Printf("\nCharacters typed: %d characters", num_chars_typed)
+	fmt.Printf("\nCPM : %.2f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
+	fmt.Printf("\nWPM: %.2f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
+	if num_chars_typed == 0{
+		fmt.Printf("\nAccuracy: -")
+	} else {
+		fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars_in_hist)))
+	}
 }
 
 func calcNumCorrectWords(typed string, original_text string) int {
