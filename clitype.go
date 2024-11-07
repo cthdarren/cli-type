@@ -1,6 +1,5 @@
 //    TODOs
 //
-//    ctrl + backspace
 //    Infinite scroll on time mode
 //    .rc file for keeping track of settings
 //    start test with most recent settings when the program is run
@@ -99,6 +98,7 @@ func typetest(text string, time_sec int) {
 	var start_timer bool = true
 	var start = time.Now()
 	breakFlag := false
+	escaped := false
 
 	fmt.Printf(text)
 	cursorToBeginning()
@@ -131,6 +131,7 @@ func typetest(text string, time_sec int) {
 
 				if key == keyboard.KeyEsc {
 					breakFlag = true
+					escaped = true
 					break
 				}
 
@@ -147,24 +148,38 @@ func typetest(text string, time_sec int) {
 					char = ' '
 				}
 
-				// TODO when i press space go to the next word instead of putting a space where i am now
-				if string(char) != string(text[cursor_pos]) {
-					hist += "_"
-				} else {
-					hist += string(char)
-				}
-
 				cursorToBeginning()
 				cursorUp((cursor_pos) / width)
 
-				if key == keyboard.KeyBackspace || key == keyboard.KeyBackspace2 {
-					if cursor_pos > 0 {
+				if key == keyboard.KeyCtrlH{
+					if len(hist) > 2 && hist[len(hist)-2] == ' '{
+							cursor_pos -= 1
+							hist = hist[:len(hist)-1]
+					}
+					for {
+						if (len(hist) < 1 || cursor_pos <= 0){
+							break
+						}
+						hist = hist[:len(hist)-1]
 						cursor_pos -= 1
+						
+						if len(hist) == 0 || hist[len(hist)-1] == ' '{
+							break
+						}
 					}
-					if len(hist) > 1 {
-						hist = hist[:len(hist)-2]
+				
+				} else if key == keyboard.KeyBackspace || key == keyboard.KeyBackspace2 {
+					if cursor_pos < 1 || len(hist) < 1{
+						break
 					}
+					cursor_pos -= 1
+					hist = hist[:len(hist)-1]
 				} else {
+					if string(char) != string(text[cursor_pos]) {
+						hist += "_"
+					} else {
+						hist += string(char)
+					}
 					cursor_pos += 1
 				}
 
@@ -173,6 +188,7 @@ func typetest(text string, time_sec int) {
 					breakFlag = true
 					break
 				}
+
 
 				output := hist + text[cursor_pos:maxLen]
 
@@ -198,25 +214,29 @@ func typetest(text string, time_sec int) {
 			break
 		}
 	}
+	
+	if (!escaped){
+		time_taken := time.Since(start).Seconds()
+		mins_taken := time.Since(start).Minutes()
+		typed_no_underscores := strings.ReplaceAll(hist, "_", "")
+		num_words_typed := len(strings.Fields(typed_no_underscores))
+		num_chars_typed := len(strings.ReplaceAll(typed_no_underscores, " ", ""))
+		// this includes num chars skipped with spacebar
+		num_chars_in_hist := len(strings.ReplaceAll(hist, " ", ""))
 
-	time_taken := time.Since(start).Seconds()
-	mins_taken := time.Since(start).Minutes()
-	typed_no_underscores := strings.ReplaceAll(hist, "_", "")
-	num_words_typed := len(strings.Fields(typed_no_underscores))
-	num_chars_typed := len(strings.ReplaceAll(typed_no_underscores, " ", ""))
-	// this includes num chars skipped with spacebar
-	num_chars_in_hist := len(strings.ReplaceAll(hist, " ", ""))
-
-	fmt.Printf("\n\nTime taken: %.2f seconds", time_taken)
-	fmt.Printf("\nWords typed: %d words", num_words_typed)
-	fmt.Printf("\nCharacters typed: %d characters", num_chars_typed)
-	fmt.Printf("\nCPM : %.2f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
-	fmt.Printf("\nWPM: %.2f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
-	if num_chars_typed == 0{
-		fmt.Printf("\nAccuracy: -")
-	} else {
-		fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars_in_hist)))
+		fmt.Printf("\n\nTime taken: %.2f seconds", time_taken)
+		fmt.Printf("\nWords typed: %d words", num_words_typed)
+		fmt.Printf("\nCharacters typed: %d characters", num_chars_typed)
+		fmt.Printf("\nCPM : %.2f CPM", float64(calcNumCorrectChars(hist, text))/mins_taken)
+		fmt.Printf("\nWPM: %.2f WPM", float64(calcNumCorrectWords(hist, text))/mins_taken)
+		if num_chars_typed == 0{
+			fmt.Printf("\nAccuracy: -")
+		} else {
+			fmt.Printf("\nAccuracy: %.2f%%", (float64(calcNumCorrectChars(hist, text)*100)/float64(num_chars_in_hist)))
+		}
+		return
 	}
+	fmt.Printf(("\n\n\n"))
 }
 
 func calcNumCorrectWords(typed string, original_text string) int {
