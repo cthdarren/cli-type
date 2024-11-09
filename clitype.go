@@ -11,14 +11,15 @@ import (
 	"embed"
 	"encoding/csv"
 	"fmt"
-	"github.com/eiannone/keyboard"
-	"golang.org/x/term"
 	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/eiannone/keyboard"
+	"golang.org/x/term"
 )
 
 //go:embed wordlists/200.csv
@@ -201,21 +202,17 @@ func typetest(text string, time_sec int) {
 
 				// TODO: for time type mode, make it "infinite" scrolling
 				if (len(output) > (3 * width)){
+					lines_typed := len(hist)/width
 					// if the cursor is on the third line or lower
-					if (len(hist) > (width)){
-						lines_typed := len(hist)%width + 1
-						output = output[lines_typed:]
-						fmt.Printf(output)
-						cursorToBeginning()
-						cursorUp(1)
-						cursorRight(len(hist) % width)
+					if (cursor_pos + 1 > width){
+						output = output[(lines_typed*width):(lines_typed*width)+(3*width)]
 					} else{
-						output = output[:(3*width)]
-						fmt.Printf(output)
-						cursorToBeginning()
-						cursorUp(2)
-						cursorRight(len(hist) % width)
+						output = output[0:3*width]	
 					}
+					fmt.Printf(output)
+					cursorToBeginning()
+					cursorUp(2)
+					cursorRight(cursor_pos % width)
 				} else{
 					fmt.Printf(output)
 					cursorToBeginning()
