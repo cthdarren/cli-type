@@ -137,7 +137,7 @@ func typetest(text string, time_sec int) {
 					panic(err)
 				}
 				cursorToBeginning()
-				if (time_sec <= 0) {
+				if (len(text) < (3*width) || time_sec <= 0) {
 					cursorUp((cursor_pos)/width)
 				}
 
@@ -205,7 +205,7 @@ func typetest(text string, time_sec int) {
 				lines_typed := len(hist)/width
 
 				// If less than 3 widths worth of content
-				if (time_sec <= 0){
+				if (len(output) < (3*width) || time_sec <= 0){
 					//Go to the top of the output of 3 or less lines
 					// Cursor is now on the bottom
 					fmt.Printf(output)
