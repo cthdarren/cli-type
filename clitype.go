@@ -150,7 +150,7 @@ func typetest(text string, time_sec int) {
 				if key == keyboard.KeySpace {
 					if text[cursor_pos] != ' '{
 						for {
-							if text[cursor_pos] == ' '{
+							if text[cursor_pos] == ' ' || cursor_pos >= maxLen - 1{
 								break
 							}
 							hist += "_"
@@ -194,15 +194,16 @@ func typetest(text string, time_sec int) {
 					cursor_pos += 1
 				}
 
+				output := hist + text[cursor_pos:maxLen]
+				lines_typed := len(hist)/width
 
 				if cursor_pos == maxLen {
-					cursorDown((cursor_pos) / width)
+					cursorDown(lines_typed)
+					fmt.Printf(output)
 					breakFlag = true
 					break
 				}
 
-				output := hist + text[cursor_pos:maxLen]
-				lines_typed := len(hist)/width
 
 				// If less than 3 widths worth of content
 				if (len(output) < (3*width) || time_sec <= 0){
@@ -217,9 +218,14 @@ func typetest(text string, time_sec int) {
 				} else {
 					// TODO breaks if you spam spacebar and reach the end
 					if (cursor_pos + 1 > width){
-						output = output[(lines_typed*width):(lines_typed*width)+(3*width)]
+						widths_typed := lines_typed*width
+						ending_index := widths_typed+(3*width)
+						if ending_index >= maxLen{
+							ending_index = maxLen-1
+						}
+						output = output[widths_typed:ending_index]
 					} else{
-						output = output[0:3*width]	
+						output = output[0:3*width]
 					}
 					fmt.Printf(output)
 					cursorToBeginning()
@@ -360,7 +366,7 @@ func main() {
 			fmt.Println("Please enter the number of time you wish to type for in seconds: ")
 			var time_sec int
 			fmt.Scanln(&time_sec)
-			numwords = 10 * time_sec
+			numwords = 30 * time_sec
 
 			data, err := wordlist200.ReadFile("wordlists/200.csv")
 			if err != nil {
