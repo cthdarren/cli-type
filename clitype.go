@@ -156,8 +156,6 @@ func typetest(text string, time_sec int) {
 					char = ' '
 				}
 
-				cursorToBeginning()
-				cursorUp((cursor_pos) / width)
 
 				if key == keyboard.KeyCtrlH{
 					if len(hist) > 2 && hist[len(hist)-2] == ' '{
@@ -198,12 +196,23 @@ func typetest(text string, time_sec int) {
 				}
 
 
+				cursorToBeginning()
 				output := hist + text[cursor_pos:maxLen]
+				lines_typed := len(hist)/width
 
 				// TODO: for time type mode, make it "infinite" scrolling
-				if (len(output) > (3 * width)){
-					lines_typed := len(hist)/width
-					// if the cursor is on the third line or lower
+				if (len(output) <= (3 * width) || time_sec == 0){
+					//Go to the top of the output of 3 or less lines
+					cursorUp(cursor_pos/width) 
+					// Cursor is now on the bottom
+					fmt.Printf(output)
+					cursorToBeginning()
+					// place cursor on the correct line 
+					cursorUp(maxLen/width - lines_typed)
+					// place cursor on the correct column
+					cursorRight(len(hist) % width)
+
+				} else {
 					if (cursor_pos + 1 > width){
 						output = output[(lines_typed*width):(lines_typed*width)+(3*width)]
 					} else{
@@ -211,13 +220,12 @@ func typetest(text string, time_sec int) {
 					}
 					fmt.Printf(output)
 					cursorToBeginning()
-					cursorUp(2)
+					if (cursor_pos + 1 > width){
+						cursorUp(2)
+					} else {
+						cursorUp((lines_typed)+2)
+					}
 					cursorRight(cursor_pos % width)
-				} else{
-					fmt.Printf(output)
-					cursorToBeginning()
-					cursorUp(maxLen/width - ((cursor_pos) / width))
-					cursorRight(len(hist) % width)
 				}
 				break
 			default:
