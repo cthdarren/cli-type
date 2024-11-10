@@ -102,7 +102,7 @@ func typetest(text string, time_sec int) {
 	escaped := false
 
 
-	if (len(text) > (3 * width)){
+	if (time_sec > 0 && len(text) > (3 * width)){
 		fmt.Printf(text[:(3*width)])
 		cursorToBeginning()
 		cursorUp(2)
@@ -136,6 +136,10 @@ func typetest(text string, time_sec int) {
 				if err != nil {
 					panic(err)
 				}
+				cursorToBeginning()
+				if (time_sec <= 0) {
+					cursorUp((cursor_pos)/width)
+				}
 
 				if key == keyboard.KeyEsc {
 					breakFlag = true
@@ -155,6 +159,7 @@ func typetest(text string, time_sec int) {
 					} 
 					char = ' '
 				}
+
 
 
 				if key == keyboard.KeyCtrlH{
@@ -189,30 +194,28 @@ func typetest(text string, time_sec int) {
 					cursor_pos += 1
 				}
 
+
 				if cursor_pos == maxLen {
 					cursorDown((cursor_pos) / width)
 					breakFlag = true
 					break
 				}
 
-
-				cursorToBeginning()
 				output := hist + text[cursor_pos:maxLen]
 				lines_typed := len(hist)/width
 
-				// TODO: for time type mode, make it "infinite" scrolling
-				if (len(output) <= (3 * width) || time_sec == 0){
+				// If less than 3 widths worth of content
+				if (time_sec <= 0){
 					//Go to the top of the output of 3 or less lines
-					cursorUp(cursor_pos/width) 
 					// Cursor is now on the bottom
 					fmt.Printf(output)
 					cursorToBeginning()
-					// place cursor on the correct line 
-					cursorUp(maxLen/width - lines_typed)
-					// place cursor on the correct column
+					// // place cursor on the correct line 
+					cursorUp(maxLen/width - ((cursor_pos) / width))
+					// // place cursor on the correct column
 					cursorRight(len(hist) % width)
-
 				} else {
+					// TODO breaks if you spam spacebar and reach the end
 					if (cursor_pos + 1 > width){
 						output = output[(lines_typed*width):(lines_typed*width)+(3*width)]
 					} else{
