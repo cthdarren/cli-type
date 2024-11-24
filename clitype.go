@@ -11,6 +11,7 @@ import (
 	"embed"
 	"encoding/csv"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -357,6 +358,29 @@ func main() {
 	numwordlist := 200
 	var words []string
 	var numwords int
+
+	rcExists := true
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal("Failed to get user home directory")
+	}
+	file, err := os.Open(homeDir + "/clitype.rc")
+
+	if err != nil {
+		rcExists = false
+		os.Create(homeDir + "/clitype.rc")
+		file, err := os.Open(homeDir + "/clitype.rc")
+		if err != nil {
+			log.Fatal("Failed to create clitype.rc in user home directory" + homeDir)
+		}
+	}
+	
+	if rcExists{
+	}
+
+
+
 
 	for {
 		var i string
