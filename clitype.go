@@ -8,6 +8,7 @@ package main
 
 import (
 	// "bufio"
+	"bufio"
 	"embed"
 	"encoding/csv"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -353,64 +355,114 @@ func cursorRight(num int) {
 	}
 }
 
+func createRcFile(homeDir string){
+		rcfile, err := os.Create(homeDir + "/.clityperc")
+		if err != nil {
+			log.Fatal("Failed to create .clityperc in user home directory" + homeDir)
+		}
+		rcfile.WriteString("MODE=0\nWORDLIST=200\nTIME=30\nWORDS=50\n")
+}
+
+func generateWordsFromWordlist(wordlist int, numwords int) []string{
+	var err error;
+	var data []byte 
+	var words []string
+	switch wordlist{
+	case 200:
+		data, err = wordlist200.ReadFile("wordlists/200.csv")
+	default:
+		break
+	}
+	if err != nil {
+		log.Fatal("Error while reading the word list", err)
+	}
+
+	reader := csv.NewReader(strings.NewReader(string(data)))
+
+	records, err := reader.ReadAll()
+	// records := strings.Join(string(data), ",")
+	for _, eachrecord := range records {
+		words = append(words, eachrecord...)
+	}
+
+	selectedWords := make([]string, numwords)
+	for i := 0; i < numwords; i++ {
+		index := rand.Intn(wordlist)
+		selectedWords[i] = words[index]
+	}
+	return selectedWords
+}
+
 func main() {
 	gracefulShutdown()
 	numwordlist := 200
 	var words []string
 	var numwords int
+	rcMode := 0
+	rcWordlist := 200
+	rcTime := 30
+	rcWords := 50
 
 	rcExists := true
 
 	homeDir, err := os.UserHomeDir()
+
 	if err != nil {
 		log.Fatal("Failed to get user home directory")
 	}
-	file, err := os.Open(homeDir + "/clitype.rc")
+
+	rcfile , err := os.Open(homeDir + "/.clityperc")
 
 	if err != nil {
+		fmt.Println(".rcfile not found, creating one in the users home directory at: " + homeDir)
 		rcExists = false
-		os.Create(homeDir + "/clitype.rc")
-		file, err := os.Open(homeDir + "/clitype.rc")
-		if err != nil {
-			log.Fatal("Failed to create clitype.rc in user home directory" + homeDir)
-		}
+		createRcFile(homeDir)
 	}
 	
 	if rcExists{
+		scanner := bufio.NewScanner(rcfile)	
+		scanner.Split(bufio.ScanLines)
+
+		for scanner.Scan(){
+			line := (strings.Split(scanner.Text(), "="))
+			variable := strings.TrimSpace(line[0])
+			value, err := strconv.Atoi(strings.TrimSpace(line[1]))
+			if err == nil{
+				switch variable {
+					case "MODE":
+						rcMode = value
+					case "WORDLIST":
+						rcWordlist = value
+					case "TIME":
+						rcTime = value
+					case "WORDS":
+						rcWords = value
+					default:
+						fmt.Println("Unknown variable in rcfile")
+				}
+			} else{
+				fmt.Println("Variable value unable to be read, using defaults...")
+			}
+		}
 	}
-
-
-
 
 	for {
 		var i string
 		printIntro()
+		if rcMode == 0{
+			fmt.Println("TIME MODE")
+		}
 		fmt.Scanln(&i)
+
 		if i == "1" {
 			fmt.Println("Please enter the number of time you wish to type for in seconds: ")
 			var time_sec int
 			fmt.Scanln(&time_sec)
-			numwords = 30 * time_sec
+			// RCTIME USED HERE
+			numwords = 30 * rcTime
 
-			data, err := wordlist200.ReadFile("wordlists/200.csv")
-			if err != nil {
-				fmt.Println("Error while reading the file", err)
-				return
-			}
-
-			reader := csv.NewReader(strings.NewReader(string(data)))
-
-			records, err := reader.ReadAll()
-			// records := strings.Join(string(data), ",")
-			for _, eachrecord := range records {
-				words = append(words, eachrecord...)
-			}
-
-			selectedWords := make([]string, numwords)
-			for i := 0; i < numwords; i++ {
-				index := rand.Intn(numwordlist)
-				selectedWords[i] = words[index]
-			}
+			// rcWORDLIST here
+			selectedWords := generateWordsFromWordlist(rcWordlist, numwords)
 			typetest(strings.Join(selectedWords, " "), time_sec)
 		} else if i == "2" {
 			fmt.Println("Please enter the number of words you wish to type for: ")
@@ -429,7 +481,8 @@ func main() {
 				words = append(words, eachrecord...)
 			}
 
-			selectedWords := make([]string, numwords)
+			// rcWORDS here
+			selectedWords := make([]string, rcWords)
 			for i := 0; i < numwords; i++ {
 				index := rand.Intn(numwordlist)
 				selectedWords[i] = words[index]
