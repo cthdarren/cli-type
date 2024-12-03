@@ -51,6 +51,9 @@ func printMenu() []int{
 			case "1":
 				fmt.Print(selectmodemenu)
 				fmt.Scanln(&secondary_inp)
+				if secondary_inp != 1 || secondary_inp != 2{
+					//invalid input
+				}
 			// change wordlist
 			case "2":
 				fmt.Print(selectwordlistmenu)
@@ -402,9 +405,19 @@ func generateWordsFromWordlist(wordlist int, numwords int) []string{
 	var err error;
 	var data []byte 
 	var words []string
+	length_of_list := 200
 	switch wordlist{
-	case 200:
+	case 1:
 		data, err = wordlist200.ReadFile("wordlists/200.csv")
+	case 2:
+		data, err = wordlist1000.ReadFile("wordlists/1000.csv")
+		length_of_list = 1000
+	case 3:
+		data, err = wordlist2000.ReadFile("wordlists/2000.csv")
+		length_of_list = 2000
+	case 4:
+		data, err = wordlist5000.ReadFile("wordlists/5000.csv")
+		length_of_list = 5000
 	default:
 		break
 	}
@@ -422,7 +435,7 @@ func generateWordsFromWordlist(wordlist int, numwords int) []string{
 
 	selectedWords := make([]string, numwords)
 	for i := 0; i < numwords; i++ {
-		index := rand.Intn(wordlist)
+		index := rand.Intn(length_of_list)
 		selectedWords[i] = words[index]
 	}
 	return selectedWords
