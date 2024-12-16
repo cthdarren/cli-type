@@ -1,7 +1,6 @@
 //    TODOs
 //
 //    Infinite scroll on middle line instead of top
-//    timer only start on the first instance of a key press
 //	  show timer countdown when doing timed test
 //	  make the menus not stack, overwrite with lines, need to set a certain height that you want
 //    custom wordlists?
@@ -188,9 +187,6 @@ func typetest(text string, time_sec int) []int {
 	done := make(chan bool)
 	keypressed := make(chan KeyPress)
 
-	if time_sec > 0 {
-		go timer(time_sec, done)
-	}
 
 	go waitForKey(keypressed) 
 
@@ -231,17 +227,13 @@ func typetest(text string, time_sec int) []int {
 	}
 
 	for {
-		if start_timer {
-			start = time.Now()
-			start_timer = false
-		}
-
 		select {
 			case <- done:
 				breakFlag = true
 				cursorDown((3*width - cursor_pos) / width)
 				break
 			case pressed := <- keypressed:
+				
 				char := pressed.Char
 				key := pressed.Key
 				err := pressed.Err
@@ -249,6 +241,11 @@ func typetest(text string, time_sec int) []int {
 				if start_timer {
 					start = time.Now()
 					start_timer = false
+
+					if time_sec > 0 {
+						go timer(time_sec, done)
+					}
+					
 				}
 
 				if err != nil {
