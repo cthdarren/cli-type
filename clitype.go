@@ -4,7 +4,7 @@
 //    timer only start on the first instance of a key press
 //	  show timer countdown when doing timed test
 //	  make the menus not stack, overwrite with lines, need to set a certain height that you want
-//    change rcfile when i change menu options 
+//    change rcfile when i change menu options
 //    custom wordlists?
 
 package main
@@ -38,6 +38,61 @@ var wordlist2000 embed.FS
 
 //go:embed wordlists/5000.csv
 var wordlist5000 embed.FS
+
+func findAllNewLineCharacters(file []byte, err error) []int{
+	if err != nil{
+		log.Fatal("Failed to open rcfile")
+	}
+	result := []int{} 
+	for i := 0; i < len(file); i++{
+		if file[i] == '\n'{
+			result = append(result, i)
+		}
+	}
+	return result
+}
+
+// 1 = change mode
+// 2 = change wordlist
+// 3 = change time
+// 4 = change words
+func updateRcFile(homeDir string, mode int, value int) bool{
+	file, err := os.OpenFile(homeDir + "/.clityperc", os.O_RDWR, os.ModeAppend) 
+	if err != nil {
+		fmt.Println("Error opening rcfile")
+		return false
+	}
+
+	newlineIndexList := findAllNewLineCharacters(os.ReadFile((homeDir + "/.clityperc")))
+	if len(newlineIndexList) < 3{
+		fmt.Println("Error in rcfile formatting")
+		return false
+		// TODO, if this happens just rewrite the whole file with the setting chosen
+	}
+
+	switch(mode){
+		case 1:
+			//MODE=0 // 6+\n (7)
+			_, err = file.Write([]byte("MODE="+strconv.Itoa(value)))
+		case 2:
+			//WORDLIST=0 // 10+\n (11+7)
+			file.Seek(int64(newlineIndexList[0]+1), 0)
+			_, err = file.Write([]byte("WORDLIST="+strconv.Itoa(value)))
+		case 3:
+			//TIME=0 // 6+\n (11+7+7)
+			file.Seek(int64(newlineIndexList[1]+1), 0)
+			_, err = file.Write([]byte("TIME="+strconv.Itoa(value)))
+		case 4:
+			file.Seek(int64(newlineIndexList[2]+1), 0)
+			_, err = file.Write([]byte("WORDS="+strconv.Itoa(value)))
+	}
+	if err != nil{
+		fmt.Println("Error writing to rcfile")
+		fmt.Println(err)
+		return false
+	}
+	return true
+}
 
 func printMenu() []int{
 	for {
@@ -431,8 +486,6 @@ func generateWordsFromWordlist(wordlist int, numwords int) []string{
 	var words []string
 	length_of_list := 200
 	switch wordlist{
-	case 1:
-		data, err = wordlist200.ReadFile("wordlists/200.csv")
 	case 2:
 		data, err = wordlist1000.ReadFile("wordlists/1000.csv")
 		length_of_list = 1000
@@ -443,6 +496,7 @@ func generateWordsFromWordlist(wordlist int, numwords int) []string{
 		data, err = wordlist5000.ReadFile("wordlists/5000.csv")
 		length_of_list = 5000
 	default:
+		data, err = wordlist200.ReadFile("wordlists/200.csv")
 		break
 	}
 	if err != nil {
@@ -456,6 +510,7 @@ func generateWordsFromWordlist(wordlist int, numwords int) []string{
 	for _, eachrecord := range records {
 		words = append(words, eachrecord...)
 	}
+
 
 	selectedWords := make([]string, numwords)
 	for i := 0; i < numwords; i++ {
@@ -518,7 +573,11 @@ func main() {
 		}
 	}
 
+	// MAIN LOOP
 	for {
+		// exitcode format = [0, 0]
+		// first index is the setting to change if > 0
+		// second index is the new value of the setting to change
 		var exitcode []int
 		// printMenu()
 		switch rcMode{
@@ -538,7 +597,6 @@ func main() {
 				break
 			// change mode
 			case 1:
-				fmt.Println(exitcode[1])
 				rcMode = exitcode[1]
 
 			// change wordlist
@@ -554,6 +612,10 @@ func main() {
 				rcWords = exitcode[1]
 			default:
 				break
+		}
+
+		if exitcode[0] > 0 && exitcode[0] <= 4{
+			updateRcFile(homeDir, exitcode[0], exitcode[1])
 		}
 		// if i == "2" {
 		// 	fmt.Println("Please enter the number of words you wish to type for: ")
