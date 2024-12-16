@@ -3,6 +3,9 @@
 //    Infinite scroll on middle line instead of top
 //    timer only start on the first instance of a key press
 //	  show timer countdown when doing timed test
+//	  make the menus not stack, overwrite with lines, need to set a certain height that you want
+//    change rcfile when i change menu options 
+//    custom wordlists?
 
 package main
 
@@ -51,13 +54,20 @@ func printMenu() []int{
 			case "1":
 				fmt.Print(selectmodemenu)
 				fmt.Scanln(&secondary_inp)
-				if secondary_inp != 1 || secondary_inp != 2{
-					//invalid input
+				secondary_inp = secondary_inp-1
+				if secondary_inp != 0 && secondary_inp != 1{
+					fmt.Println("\n\nInvalid input")
+					continue
 				}
-			// change wordlist
+
+		    // change wordlist
 			case "2":
 				fmt.Print(selectwordlistmenu)
 				fmt.Scanln(&secondary_inp)
+				if secondary_inp != 1 && secondary_inp != 2 && secondary_inp != 3 && secondary_inp != 4 {
+					fmt.Println("\n\nInvalid input")
+					continue
+				}
 			// change time limit
 			case "3":
 				fmt.Print(selecttimedurationmenu)
@@ -76,21 +86,35 @@ func printMenu() []int{
 						fmt.Scanln(&tertiary_inp)
 						secondary_inp = tertiary_inp
 					default:
-						fmt.Print("Invalid command")
+						fmt.Print("\n\nInvalid command")
+						continue
 				}
 			// change words number
 			case "4":
 				fmt.Print(selectwordsmenu)
 				fmt.Scanln(&secondary_inp)
-				if secondary_inp != 5{
-					fmt.Print(customwordsmenu)
-					fmt.Scanln(&tertiary_inp)
+				switch secondary_inp{
+					case 1:	
+						secondary_inp = 10
+					case 2:	
+						secondary_inp = 25
+					case 3:	
+						secondary_inp = 50
+					case 4:	
+						secondary_inp = 100
+					case 5:	
+						fmt.Print(customwordsmenu)
+						fmt.Scanln(&tertiary_inp)
+						secondary_inp = tertiary_inp
+					default:
+						fmt.Print("\n\nInvalid command")
+						continue
 				}
 			case "q":
 				os.Exit(0)
 			default:
-				fmt.Println("Unknown Command.")
-				return printMenu()
+				fmt.Println("\n\nInvalid Command.")
+				continue
 		}
 		intinp, _ = strconv.Atoi(inp)
 		output = append(output, intinp, secondary_inp)
@@ -505,22 +529,31 @@ func main() {
 			case 1:
 				selectedWords := generateWordsFromWordlist(rcWordlist, rcWords)
 				exitcode = typetest(strings.Join(selectedWords, " "), 0)
+			default:
+				break
 		}
 		switch exitcode[0]{
 			// normal finish
 			case 0:
+				break
 			// change mode
 			case 1:
+				fmt.Println(exitcode[1])
 				rcMode = exitcode[1]
+
 			// change wordlist
 			case 2:
 				rcWordlist = exitcode[1]
+
 			// change time limit
 			case 3:
 				rcTime = exitcode[1]
+
 			// change word limit
 			case 4:
 				rcWords = exitcode[1]
+			default:
+				break
 		}
 		// if i == "2" {
 		// 	fmt.Println("Please enter the number of words you wish to type for: ")

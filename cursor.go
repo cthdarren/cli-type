@@ -2,6 +2,11 @@ package main
 
 import "fmt"
 
+func wipe_lines() {
+	cursorToBeginning()
+	cursorUp(10)
+}
+
 func numLinesToStartFromCursor(chars_per_line int, text_len int, cursor_pos int) int {
 	var cursor_line int = cursor_pos / chars_per_line
 	return cursor_line
