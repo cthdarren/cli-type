@@ -2,14 +2,23 @@
 A quick and customisable typing test in your terminal, saving time to navigate your web browser.
 
 
-# To do
-CLI app in go
+# Installation (Linux)
+1. Download the linux binary on the releases page and run
 
-Have a default test that you can configure in a file, so when you type "clt" the default test is booted up.
+```
+chmod +x ~/Downloads/clitype
+```
 
-Can also have different settings for tests
+2. Move the binary to a directory in your path _e.g_
 
-- Time
+```
+mv ~/Downloads/clitype /usr/local/bin/clitype
+```
 
-- Word length
+3. Now, you should be able to run the test from anywhere using the `clitype` command!
+```
+clitype
+```
 
+# Installation (Windows)
+1. Download the windows excecutable on the releases page and run it
