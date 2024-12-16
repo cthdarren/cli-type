@@ -4,7 +4,6 @@
 //    timer only start on the first instance of a key press
 //	  show timer countdown when doing timed test
 //	  make the menus not stack, overwrite with lines, need to set a certain height that you want
-//    change rcfile when i change menu options
 //    custom wordlists?
 
 package main
@@ -56,36 +55,19 @@ func findAllNewLineCharacters(file []byte, err error) []int{
 // 2 = change wordlist
 // 3 = change time
 // 4 = change words
-func updateRcFile(homeDir string, mode int, value int) bool{
+func updateRcFile(homeDir string, rcMode int, rcWordlist int, rcTime int, rcWords int) bool{
 	file, err := os.OpenFile(homeDir + "/.clityperc", os.O_RDWR, os.ModeAppend) 
 	if err != nil {
 		fmt.Println("Error opening rcfile")
 		return false
 	}
 
-	newlineIndexList := findAllNewLineCharacters(os.ReadFile((homeDir + "/.clityperc")))
-	if len(newlineIndexList) < 3{
-		fmt.Println("Error in rcfile formatting")
-		return false
-		// TODO, if this happens just rewrite the whole file with the setting chosen
-	}
+	file.Truncate(0)
+	_, err = file.Write([]byte(fmt.Sprintf(`MODE=%d
+WORDLIST=%d
+TIME=%d
+WORDS=%d`,rcMode, rcWordlist, rcTime, rcWords)))
 
-	switch(mode){
-		case 1:
-			//MODE=0 // 6+\n (7)
-			_, err = file.Write([]byte("MODE="+strconv.Itoa(value)))
-		case 2:
-			//WORDLIST=0 // 10+\n (11+7)
-			file.Seek(int64(newlineIndexList[0]+1), 0)
-			_, err = file.Write([]byte("WORDLIST="+strconv.Itoa(value)))
-		case 3:
-			//TIME=0 // 6+\n (11+7+7)
-			file.Seek(int64(newlineIndexList[1]+1), 0)
-			_, err = file.Write([]byte("TIME="+strconv.Itoa(value)))
-		case 4:
-			file.Seek(int64(newlineIndexList[2]+1), 0)
-			_, err = file.Write([]byte("WORDS="+strconv.Itoa(value)))
-	}
 	if err != nil{
 		fmt.Println("Error writing to rcfile")
 		fmt.Println(err)
@@ -526,7 +508,7 @@ func main() {
 	// var words []string
 	// var numwords int
 	rcMode := 0
-	rcWordlist := 200
+	rcWordlist := 1
 	rcTime := 30
 	rcWords := 50
 
@@ -615,7 +597,7 @@ func main() {
 		}
 
 		if exitcode[0] > 0 && exitcode[0] <= 4{
-			updateRcFile(homeDir, exitcode[0], exitcode[1])
+			updateRcFile(homeDir, rcMode, rcWordlist, rcTime, rcWords)
 		}
 		// if i == "2" {
 		// 	fmt.Println("Please enter the number of words you wish to type for: ")
