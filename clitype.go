@@ -1,19 +1,22 @@
 //    TODOs
 //
-//    Infinite scroll on time mode
-//    .rc file for keeping track of settings
-//    start test with most recent settings when the program is run
+//    Infinite scroll on middle line instead of top
+//	  show timer countdown when doing timed test
+//	  make the menus not stack, overwrite with lines, need to set a certain height that you want
+//    custom wordlists?
 
 package main
 
 import (
-	// "bufio"
+	"bufio"
 	"embed"
 	"encoding/csv"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -34,18 +37,125 @@ var wordlist2000 embed.FS
 //go:embed wordlists/5000.csv
 var wordlist5000 embed.FS
 
-func printIntro() {
-	fmt.Print(`
+func findAllNewLineCharacters(file []byte, err error) []int{
+	if err != nil{
+		log.Fatal("Failed to open rcfile")
+	}
+	result := []int{} 
+	for i := 0; i < len(file); i++{
+		if file[i] == '\n'{
+			result = append(result, i)
+		}
+	}
+	return result
+}
 
-=========================================================================
-Welcome to CLI Type. To change the mode of typing, type :q
+// 1 = change mode
+// 2 = change wordlist
+// 3 = change time
+// 4 = change words
+func updateRcFile(homeDir string, rcMode int, rcWordlist int, rcTime int, rcWords int) bool{
+	file, err := os.OpenFile(homeDir + "/.clityperc", os.O_RDWR, os.ModeAppend) 
+	if err != nil {
+		fmt.Println("Error opening rcfile")
+		return false
+	}
 
-[1] Time
-[2] Words
+	file.Truncate(0)
+	_, err = file.Write([]byte(fmt.Sprintf(`MODE=%d
+WORDLIST=%d
+TIME=%d
+WORDS=%d`,rcMode, rcWordlist, rcTime, rcWords)))
 
-=========================================================================
+	if err != nil{
+		fmt.Println("Error writing to rcfile")
+		fmt.Println(err)
+		return false
+	}
+	return true
+}
 
-Select a mode: `)
+func printMenu() []int{
+	for {
+		var inp string
+		var intinp int
+		var secondary_inp int
+		var tertiary_inp int = 0
+		var output []int
+		fmt.Print(mainmenu)
+		fmt.Scanln(&inp)
+		switch inp{
+			// TODO check for invalid inputs
+			// change mode
+			case "1":
+				fmt.Print(selectmodemenu)
+				fmt.Scanln(&secondary_inp)
+				secondary_inp = secondary_inp-1
+				if secondary_inp != 0 && secondary_inp != 1{
+					fmt.Println("\n\nInvalid input")
+					continue
+				}
+
+		    // change wordlist
+			case "2":
+				fmt.Print(selectwordlistmenu)
+				fmt.Scanln(&secondary_inp)
+				if secondary_inp != 1 && secondary_inp != 2 && secondary_inp != 3 && secondary_inp != 4 {
+					fmt.Println("\n\nInvalid input")
+					continue
+				}
+			// change time limit
+			case "3":
+				fmt.Print(selecttimedurationmenu)
+				fmt.Scanln(&secondary_inp)
+				switch secondary_inp{
+					case 1:	
+						secondary_inp = 15
+					case 2:	
+						secondary_inp = 30 
+					case 3:	
+						secondary_inp = 60
+					case 4:	
+						secondary_inp = 120
+					case 5:	
+						fmt.Print(customtimemenu)
+						fmt.Scanln(&tertiary_inp)
+						secondary_inp = tertiary_inp
+					default:
+						fmt.Print("\n\nInvalid command")
+						continue
+				}
+			// change words number
+			case "4":
+				fmt.Print(selectwordsmenu)
+				fmt.Scanln(&secondary_inp)
+				switch secondary_inp{
+					case 1:	
+						secondary_inp = 10
+					case 2:	
+						secondary_inp = 25
+					case 3:	
+						secondary_inp = 50
+					case 4:	
+						secondary_inp = 100
+					case 5:	
+						fmt.Print(customwordsmenu)
+						fmt.Scanln(&tertiary_inp)
+						secondary_inp = tertiary_inp
+					default:
+						fmt.Print("\n\nInvalid command")
+						continue
+				}
+			case "q":
+				os.Exit(0)
+			default:
+				fmt.Println("\n\nInvalid Command.")
+				continue
+		}
+		intinp, _ = strconv.Atoi(inp)
+		output = append(output, intinp, secondary_inp)
+		return output
+		}
 }
 
 func timer(duration int, done chan<- bool) {
@@ -66,13 +176,17 @@ func waitForKey(keypressed chan <- KeyPress) {
 	}
 }
 
-func typetest(text string, time_sec int) {
+// return values:
+// [0] = normal
+// [1, 0] = change mode time
+// [1, 1] = change mode to words
+// [2, x] = change wordlist to x (1:200, 2:1000, 3:2000, 4:5000)
+// [3, x] = change time limit of time test to x
+// [4, x] = change word limit of word test to x
+func typetest(text string, time_sec int) []int {
 	done := make(chan bool)
 	keypressed := make(chan KeyPress)
 
-	if time_sec > 0 {
-		go timer(time_sec, done)
-	}
 
 	go waitForKey(keypressed) 
 
@@ -81,7 +195,7 @@ func typetest(text string, time_sec int) {
 	if height > 0 {}
 
 	if termerr != nil {
-		return
+		log.Fatal("Failed to get size of terminal", termerr)
 	}
 
 	if keeberr := keyboard.Open(); keeberr != nil {
@@ -113,17 +227,13 @@ func typetest(text string, time_sec int) {
 	}
 
 	for {
-		if start_timer {
-			start = time.Now()
-			start_timer = false
-		}
-
 		select {
 			case <- done:
 				breakFlag = true
 				cursorDown((3*width - cursor_pos) / width)
 				break
 			case pressed := <- keypressed:
+				
 				char := pressed.Char
 				key := pressed.Key
 				err := pressed.Err
@@ -131,6 +241,11 @@ func typetest(text string, time_sec int) {
 				if start_timer {
 					start = time.Now()
 					start_timer = false
+
+					if time_sec > 0 {
+						go timer(time_sec, done)
+					}
+					
 				}
 
 				if err != nil {
@@ -150,7 +265,7 @@ func typetest(text string, time_sec int) {
 				if key == keyboard.KeySpace {
 					if text[cursor_pos] != ' '{
 						for {
-							if text[cursor_pos] == ' '{
+							if text[cursor_pos] == ' ' || cursor_pos >= maxLen - 1{
 								break
 							}
 							hist += "_"
@@ -194,15 +309,16 @@ func typetest(text string, time_sec int) {
 					cursor_pos += 1
 				}
 
+				output := hist + text[cursor_pos:maxLen]
+				lines_typed := len(hist)/width
 
 				if cursor_pos == maxLen {
-					cursorDown((cursor_pos) / width)
+					cursorDown(lines_typed)
+					fmt.Printf(output)
 					breakFlag = true
 					break
 				}
 
-				output := hist + text[cursor_pos:maxLen]
-				lines_typed := len(hist)/width
 
 				// If less than 3 widths worth of content
 				if (len(output) < (3*width) || time_sec <= 0){
@@ -217,9 +333,14 @@ func typetest(text string, time_sec int) {
 				} else {
 					// TODO breaks if you spam spacebar and reach the end
 					if (cursor_pos + 1 > width){
-						output = output[(lines_typed*width):(lines_typed*width)+(3*width)]
+						widths_typed := lines_typed*width
+						ending_index := widths_typed+(3*width)
+						if ending_index >= maxLen{
+							ending_index = maxLen-1
+						}
+						output = output[widths_typed:ending_index]
 					} else{
-						output = output[0:3*width]	
+						output = output[0:3*width]
 					}
 					fmt.Printf(output)
 					cursorToBeginning()
@@ -239,13 +360,23 @@ func typetest(text string, time_sec int) {
 		}
 	}
 	
-	if (!escaped){
-		time_taken := time.Since(start).Seconds()
-		mins_taken := time.Since(start).Minutes()
-		printResults(hist, text, time_taken, mins_taken)
-		return
-	}
+	if (escaped){
+		_ = keyboard.Close()
+		fmt.Printf(("\n\n\n"))
+		return printMenu()
+	} 
+	time_taken := time.Since(start).Seconds()
+	mins_taken := time.Since(start).Minutes()
+	printResults(hist, text, time_taken, mins_taken)
+
+	_ = keyboard.Close()
+
+
+	fmt.Println("\n\nPress enter to continue...")
+
+	fmt.Scanln()
 	fmt.Printf(("\n\n\n"))
+	return []int{0}
 }
 
 func printResults(hist string, text string, time_taken float64, mins_taken float64){
@@ -319,97 +450,181 @@ func gracefulShutdown() {
 	}()
 }
 
-func numLinesToStartFromCursor(chars_per_line int, text_len int, cursor_pos int) int {
-	var cursor_line int = cursor_pos / chars_per_line
-	return cursor_line
+
+func createRcFile(homeDir string){
+		rcfile, err := os.Create(homeDir + "/.clityperc")
+		if err != nil {
+			log.Fatal("Failed to create .clityperc in user home directory" + homeDir)
+		}
+		rcfile.WriteString("MODE=0\nWORDLIST=200\nTIME=30\nWORDS=50\n")
 }
 
-func cursorDown(num int) {
-	if num > 0 {
-		fmt.Printf("\033[%dB", num)
+func generateWordsFromWordlist(wordlist int, numwords int) []string{
+	var err error;
+	var data []byte 
+	var words []string
+	length_of_list := 200
+	switch wordlist{
+	case 2:
+		data, err = wordlist1000.ReadFile("wordlists/1000.csv")
+		length_of_list = 1000
+	case 3:
+		data, err = wordlist2000.ReadFile("wordlists/2000.csv")
+		length_of_list = 2000
+	case 4:
+		data, err = wordlist5000.ReadFile("wordlists/5000.csv")
+		length_of_list = 5000
+	default:
+		data, err = wordlist200.ReadFile("wordlists/200.csv")
+		break
 	}
-}
-
-func cursorUp(num int) {
-	if num > 0 {
-		fmt.Printf("\033[%dA", num)
+	if err != nil {
+		log.Fatal("Error while reading the word list", err)
 	}
-}
 
-func cursorToBeginning() {
-	fmt.Printf("\r")
-}
+	reader := csv.NewReader(strings.NewReader(string(data)))
 
-func cursorRight(num int) {
-	if num > 0 {
-		fmt.Printf("\033[%dC", num)
+	records, err := reader.ReadAll()
+	// records := strings.Join(string(data), ",")
+	for _, eachrecord := range records {
+		words = append(words, eachrecord...)
 	}
+
+
+	selectedWords := make([]string, numwords)
+	for i := 0; i < numwords; i++ {
+		index := rand.Intn(length_of_list)
+		selectedWords[i] = words[index]
+	}
+	return selectedWords
 }
 
 func main() {
 	gracefulShutdown()
-	numwordlist := 200
-	var words []string
-	var numwords int
+	// numwordlist := 200
+	// var words []string
+	// var numwords int
+	rcMode := 0
+	rcWordlist := 1
+	rcTime := 30
+	rcWords := 50
 
-	for {
-		var i string
-		printIntro()
-		fmt.Scanln(&i)
-		if i == "1" {
-			fmt.Println("Please enter the number of time you wish to type for in seconds: ")
-			var time_sec int
-			fmt.Scanln(&time_sec)
-			numwords = 10 * time_sec
+	rcExists := true
 
-			data, err := wordlist200.ReadFile("wordlists/200.csv")
-			if err != nil {
-				fmt.Println("Error while reading the file", err)
-				return
+	homeDir, err := os.UserHomeDir()
+
+	if err != nil {
+		log.Fatal("Failed to get user home directory")
+	}
+
+	rcfile , err := os.Open(homeDir + "/.clityperc")
+
+	if err != nil {
+		fmt.Println(".rcfile not found, creating one in the users home directory at: " + homeDir)
+		rcExists = false
+		createRcFile(homeDir)
+	}
+	
+	if rcExists{
+		scanner := bufio.NewScanner(rcfile)	
+		scanner.Split(bufio.ScanLines)
+
+		for scanner.Scan(){
+			line := (strings.Split(scanner.Text(), "="))
+			variable := strings.TrimSpace(line[0])
+			value, err := strconv.Atoi(strings.TrimSpace(line[1]))
+			if err == nil{
+				switch variable {
+					case "MODE":
+						rcMode = value
+					case "WORDLIST":
+						rcWordlist = value
+					case "TIME":
+						rcTime = value
+					case "WORDS":
+						rcWords = value
+					default:
+						fmt.Println("Unknown variable in rcfile")
+				}
+			} else{
+				fmt.Println("Variable value unable to be read, using defaults...")
 			}
-
-			reader := csv.NewReader(strings.NewReader(string(data)))
-
-			records, err := reader.ReadAll()
-			// records := strings.Join(string(data), ",")
-			for _, eachrecord := range records {
-				words = append(words, eachrecord...)
-			}
-
-			selectedWords := make([]string, numwords)
-			for i := 0; i < numwords; i++ {
-				index := rand.Intn(numwordlist)
-				selectedWords[i] = words[index]
-			}
-			typetest(strings.Join(selectedWords, " "), time_sec)
-		} else if i == "2" {
-			fmt.Println("Please enter the number of words you wish to type for: ")
-			fmt.Scanln(&numwords)
-
-			data, err := wordlist200.ReadFile("wordlists/200.csv")
-			if err != nil {
-				fmt.Println("Error while reading the file", err)
-				return
-			}
-
-			reader := csv.NewReader(strings.NewReader(string(data)))
-			records, err := reader.ReadAll()
-
-			for _, eachrecord := range records {
-				words = append(words, eachrecord...)
-			}
-
-			selectedWords := make([]string, numwords)
-			for i := 0; i < numwords; i++ {
-				index := rand.Intn(numwordlist)
-				selectedWords[i] = words[index]
-			}
-			typetest(strings.Join(selectedWords, " "), -1)
-		} else if i == ":q" {
-			fmt.Println("Thank you for using CLI Type!")
-			os.Exit(0)
-		} else {
-			fmt.Println("Unknown command.")
 		}
+	}
+
+	// MAIN LOOP
+	for {
+		// exitcode format = [0, 0]
+		// first index is the setting to change if > 0
+		// second index is the new value of the setting to change
+		var exitcode []int
+		// printMenu()
+		switch rcMode{
+			case 0:
+				// 30 * rcTime is used for generating an "infinite" illusion, it's impossible to type at 30 wps (that's 1800 wpm btw) (i hope)
+				selectedWords := generateWordsFromWordlist(rcWordlist, 30 * rcTime)
+				exitcode = typetest(strings.Join(selectedWords, " "), rcTime)
+			case 1:
+				selectedWords := generateWordsFromWordlist(rcWordlist, rcWords)
+				exitcode = typetest(strings.Join(selectedWords, " "), 0)
+			default:
+				break
+		}
+		switch exitcode[0]{
+			// normal finish
+			case 0:
+				break
+			// change mode
+			case 1:
+				rcMode = exitcode[1]
+
+			// change wordlist
+			case 2:
+				rcWordlist = exitcode[1]
+
+			// change time limit
+			case 3:
+				rcTime = exitcode[1]
+
+			// change word limit
+			case 4:
+				rcWords = exitcode[1]
+			default:
+				break
+		}
+
+		if exitcode[0] > 0 && exitcode[0] <= 4{
+			updateRcFile(homeDir, rcMode, rcWordlist, rcTime, rcWords)
+		}
+		// if i == "2" {
+		// 	fmt.Println("Please enter the number of words you wish to type for: ")
+		// 	fmt.Scanln(&numwords)
+		//
+		// 	data, err := wordlist200.ReadFile("wordlists/200.csv")
+		// 	if err != nil {
+		// 		fmt.Println("Error while reading the file", err)
+		// 		return
+		// 	}
+		//
+		// 	reader := csv.NewReader(strings.NewReader(string(data)))
+		// 	records, err := reader.ReadAll()
+		//
+		// 	for _, eachrecord := range records {
+		// 		words = append(words, eachrecord...)
+		// 	}
+		//
+		// 	// rcWORDS here
+		// 	selectedWords := make([]string, rcWords)
+		// 	for i := 0; i < numwords; i++ {
+		// 		index := rand.Intn(numwordlist)
+		// 		selectedWords[i] = words[index]
+		// 	}
+		// 	typetest(strings.Join(selectedWords, " "), -1)
+		// } else if i == ":q" {
+		// 	fmt.Println("Thank you for using CLI Type!")
+		// 	os.Exit(0)
+		// } else {
+		// 	fmt.Println("Unknown command.")
+		// }
 	}
 }
